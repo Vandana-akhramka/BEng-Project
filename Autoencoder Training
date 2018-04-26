@@ -1,0 +1,152 @@
+'''
+This script is used to train the auto-encoder.
+'''
+import os
+import sys
+import keras
+from keras.models import Sequential, Model
+from keras.layers import Dense, Activation, Flatten, Reshape
+from keras.layers.normalization import BatchNormalization
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+'''
+The following 3 lines of code are important to 
+be able to use GPUs on Eddie. All code below it must be indented
+'''
+cfg =tf.ConfigProto()
+cfg.gpu_options.allow_growth = True
+with tf.Session(config=cfg) as sess:	
+	
+#Variables
+#this is the size of every segment selected in one dimension
+#all images are squares)
+	seg_size = 9
+#Hidden layer sizes
+	h1 = 60
+	h2 = 30
+#This is where the image patches are saved
+	directory = '/home/s1455391/01project/Autoencoder/'	
+	
+#file paths to all training patches
+	filename1 = directory + 'seg_images/14' + 'caseA.npy'
+	filename2 = directory + 'seg_images/15' + 'caseA.npy'
+	filename3 = directory + 'seg_images/16' + 'caseA.npy'
+	filename4 = directory + 'seg_images/17' + 'caseA.npy'
+	filename5 = directory + 'seg_images/19' + 'caseA.npy'
+	filename6 = directory + 'seg_images/20' + 'caseA.npy'
+	filename7 = directory + 'seg_images/37' + 'caseA.npy'
+	filename8 = directory + 'seg_images/38' + 'caseA.npy'
+	filename9 = directory + 'seg_images/39' + 'caseA.npy'
+	filename10= directory + 'seg_images/40' + 'caseA.npy'
+	filename11= directory + 'seg_images/41' + 'caseA.npy'
+	filename12= directory + 'seg_images/42' + 'caseA.npy'
+	filename13= directory + 'seg_images/43' + 'caseA.npy'
+	filename14= directory + 'seg_images/44' + 'caseA.npy'
+	filename15= directory + 'seg_images/45' + 'caseA.npy'
+	
+#loading in all training patches
+	Image_1 = np.load(filename1)
+	Image_2 = np.load(filename2)
+	Image_3 = np.load(filename3)
+	Image_4 = np.load(filename4)
+	Image_5 = np.load(filename5)
+	Image_6 = np.load(filename6)
+	Image_7 = np.load(filename7)
+	Image_8 = np.load(filename8)
+	Image_9 = np.load(filename9)
+	Image_10= np.load(filename10)
+	Image_11= np.load(filename11)
+	Image_12= np.load(filename12)
+	Image_13= np.load(filename13)
+	Image_14= np.load(filename14)
+	Image_15= np.load(filename15)
+
+#Combine all patches to make one training array
+	Image_train = np.concatenate((Image_1, Image_2, Image_3,
+                                     Image_4, Image_5, Image_6, 
+                                     Image_7, Image_8, Image_9,       
+                                     Image_10,Image_11,Image_12,
+                                     Image_13,Image_14,Image_15))
+	'''
+	This is a tensorboard callback. It allows us to view all     
+       training details like loss, accuracy, time, weight histogram, 
+       etc. histogram_freq is set to zero to avoid making weight 
+       histograms as this file ends up being very large (>20GB)
+	'''
+	tbCallBack =   
+               keras.callbacks.TensorBoard(log_dir='./logs/model', 
+               histogram_freq=0, write_graph=True, write_images=True)
+#The Sequential model is a linear stack of layers.	
+	autoencoder = Sequential()
+#input layer
+#flattens the input to a 1-Dimensional array	
+	autoencoder.add(Flatten(input_shape=(seg_size,seg_size,)))
+#add hidden layers. define activation function and weight initialisation	
+#hidden layer 1
+	autoencoder.add(Dense(h1, activation='sigmoid',
+                      kernel_initializer='glorot_uniform'))	                      
+#Normalize the weights of the previous layer at each batch. 
+#mean=0, std dev = 1	                      
+	autoencoder.add(BatchNormalization())                      
+#hidden layer 2	                                          
+	autoencoder.add(Dense(h2, activation='sigmoid',
+	                      kernel_initializer='he_uniform'))  
+	autoencoder.add(BatchNormalization())                        
+#hidden layer 3	                      
+	autoencoder.add(Dense(h1, activation='sigmoid',
+	                      kernel_initializer='he_uniform'))
+	autoencoder.add(BatchNormalization())  
+#output layer 	             	
+	autoencoder.add(Dense((seg_size*seg_size),   
+                             activation='sigmoid',
+	                      kernel_initializer='glorot_uniform'))
+#reshape output to match the dimensions of the input	                      
+	autoencoder.add(Reshape((seg_size, seg_size)))
+#compile the model. 
+#define the optimisation function, loss function and additional metrics
+	autoencoder.compile(optimizer='adagrad',
+	              loss='cosine_proximity',
+	              metrics=['mse'])
+	'''
+	train the model and create a callback that stores the 
+	metrics at every epoch define the validation split on 
+	the training set, the number of epochs, input and expected 
+	output, and call the tensorboard callback. verbose=2 
+	minimises the information printed on the screen to just 
+	the metrics and time.
+	'''	
+	history = autoencoder.fit(Image_train, 
+				Image_train, 
+				validation_split=0.5,
+				epochs=500, 
+				verbose = 2,
+				callbacks=[tbCallBack])
+
+#file path where the architectures are saved
+	architecture = directory + '/architectures/autoencoder.h5'
+	autoencoder.save(architecture)
+
+#file path where graphs ae saved	
+	accuracy = directory + '/graphs/Accuracy'
+	loss = directory + '/graphs/Loss'
+
+#plotting training and validation accuracy	
+	plt.plot(history.history['acc'])
+	plt.plot(history.history['val_acc'])
+	plt.title('model accuracy')
+	plt.ylabel('accuracy')
+	plt.xlabel('epoch')
+	plt.legend(['train', 'val'], loc='lower right')
+	plt.savefig(accuracy)
+	plt.close()
+
+#plotting training and validation loss	
+	plt.plot(history.history['loss'])
+	plt.plot(history.history['val_loss'])
+	plt.title('model loss')
+	plt.ylabel('loss')
+	plt.xlabel('epoch')
+	plt.legend(['train', 'val'], loc='lower right')
+	plt.savefig(loss)
+
