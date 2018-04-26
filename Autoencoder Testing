@@ -1,0 +1,57 @@
+'''
+This script is used to test the auto-encoder.
+'''
+import keras
+from keras.models import Sequential, Model, load_model
+import numpy as np
+import tensorflow as tf
+'''
+The following 3 lines of code are important to 
+be able to use GPUs on Eddie. All code below it must be indented
+'''
+cfg =tf.ConfigProto()
+cfg.gpu_options.allow_growth = True
+with tf.Session(config=cfg) as sess:	
+	
+	#variables
+	seg_size = 9
+	directory = '/home/s1455391/01project/Autoencoder/'	
+#file paths to all test patches	
+       filename1 = directory + 'seg_images/21' + 'caseA.npy'
+       filename2 = directory + 'seg_images/22' + 'caseA.npy'
+       filename3 = directory + 'seg_images/23' + 'caseA.npy'
+       filename4 = directory + 'seg_images/24' + 'caseA.npy'
+       filename5 = directory + 'seg_images/46' + 'caseA.npy'
+       filename6 = directory + 'seg_images/47' + 'caseA.npy'
+       filename7 = directory + 'seg_images/48' + 'caseA.npy'
+       filename8 = directory + 'seg_images/49' + 'caseA.npy'
+#loading in all test patches
+	Image_1 = np.load(filename1)
+	Image_2 = np.load(filename2)
+	Image_3 = np.load(filename3)
+	Image_4 = np.load(filename3)
+	Image_5 = np.load(filename3)
+	Image_6 = np.load(filename3)
+	Image_7 = np.load(filename3)
+	Image_8 = np.load(filename3)
+
+#Combine all patches to make one test array
+	Image_test = np.concatenate((Image_1, Image_2, Image_3,	
+                                    Image_4, Image_5, Image_6, 
+                                    Image_7, Image_8))
+#The Sequential model is a linear stack of layers.	
+	autoencoder = Sequential()
+
+#load the existing architecture
+	architecture = directory + 'architectures/autoencoder.h5'
+	autoencoder = load_model(architecture)
+#compile the model. 
+#define the optimisation function, 
+#loss function and additional metrics
+	autoencoder.compile(optimizer='sgd',
+	              loss='mean_squared_error',
+	              metrics=['accuracy'])
+#evaluate and print the metrics for the test images	                           
+	Test_metrics = autoencoder.evaluate(Image_test, Image_test,   
+                                           verbose = 2)	
+	print(Test_metrics)
