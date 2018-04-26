@@ -1,0 +1,85 @@
+'''
+This script creates the image patches for data augmentation
+Similar code to create labels.
+'''
+
+import gtk
+import os
+from Tkinter import Tk
+from tkFileDialog import askopenfilename
+import numpy as np
+import sys
+from LoadImages import load_images
+
+#variables
+save_dir = '/home/s1455391/01project/Autoencoder/seg_images'
+znum = '0' #Saves the number of slices or the x,y,z dimensions
+xnum = '0'
+ynum = '0'	
+seg_size = 9 
+#this is the size of every segment selected in one dimension. 
+#all images are squares)
+stride = 3	#overlap stride
+xi = 0	#keeping track of x position in original image	
+yi = 0	#keeping track of y position on original image
+
+Image_details = load_images()	#call the load image function
+Image, xnum, ynum, znum, case_num = Image_details	
+#read in information needed
+
+seg_slice = (((xnum-seg_size)/stride)+1)*
+            (((ynum-seg_size)/stride)+1)	
+#seg_slice is the number of images per slice.
+seg_row = (((xnum-seg_size)/stride)+1) 
+#keep track of which row we are in
+total_slices = znum*seg_slice 
+#total number of segmented images made from a single case
+
+imin = np.min(Image)	#image minimum
+imax = np.max(Image)	#image maximum
+idiv = imax - imin	#difference
+imean = np.mean(Image_c)	#image mean
+istd = np.std(Image_c)	#image image standard deviation
+
+Image_seg = np.zeros(shape=(total_slices,seg_size,seg_size))
+#make image segments
+
+for seg_number in range(0,total_slices):	
+#going through every segment
+	z  = seg_number/seg_slice					#tracking slice of original image
+	
+	yi = (stride*((seg_number%seg_slice)/seg_row))	
+'''
+seg_number%seg_slice keeps track of which segment we are looking at in the given slice as it takes the remainder. (seg_number%seg_slice)/seg_row) keeps track of which row of segments we are looking at. (seg_size*((seg_number%seg_slice)/seg_row)) keeps track of which y position to start counting from in the original image
+'''
+	xi = (stride*((seg_number%seg_slice)%seg_row))
+'''
+seg_number%seg_slice keeps track of which segment we are looking_at in the given slice as it takes the remainder. (seg_number%seg_slice)%seg_row) keeps track of which column of segments we are looking at(seg_size*((seg_number%seg_slice)%seg_row)) keeps track of which x position to start counting from in the original image.
+'''
+	for y in range(0,seg_size):				
+#going through every y on segment image
+		Image_seg [seg_number][y] =
+                        (Image[z,(yi+y),xi:(xi+seg_size)] - imin)/idiv 
+#Normalise [0,1]
+		#Image_seg [seg_number][y] = 
+                       (Image[z,(yi+y),xi:(xi+seg_size)] - imean)/istd
+#Normalise [mean=0, std.dev=1]
+		#Image_seg [seg_number][y] = 
+                        Image[z,(yi+y),xi:(xi+seg_size)] 
+#No normalise
+		#Image_seg [seg_number][y] = 
+                  (2*(Image[z,(yi+y),xi:(xi+seg_size)] - imin)/idiv)-1 
+#Normalise [-1,1]
+		
+os.chdir(save_dir)	
+#enter the folder where the patches are to be saved
+filename = case_num + 'caseA.npy'	
+segfile = filename	#the filename the patches are saved as
+np.save(segfile, Image_seg)	#save the patches
+
+print (case_num) #keep track of which image was created
+print('Time taken:')	#keep track of time taken
+time_len = time.time()-start_time
+print(time_len)
+
+ 
