@@ -1,0 +1,123 @@
+'''
+This is a function to load the case images. 
+It reads the relevant details from the .mhd files,
+loads the .raw files,
+and returns a numpy array containing the image.
+'''
+
+
+def load_images():
+	import gtk
+	import os
+	from Tkinter import Tk
+	from tkFileDialog import askopenfilename
+	import numpy as np
+	
+#variables
+	directory = '/home/s1455391/01project/Images' 
+#This is where the case files are saved	
+	
+	target = ['DimSize', 'ElementType', 'ElementDataFile']	
+#List of words to search in the mhd file
+#Saves the number of slices or the x,y,z dimensions
+	znum = '0'
+	xnum = '0'
+	ynum = '0'	
+	etype = '0'  #Saves the element type
+	casefile = '0' #saves the data file
+	
+	gtk.set_interactive(False) 
+#Turn off interactive feature of gtk
+	os.chdir(directory) 
+#Changes the working directory to the parameter, i.e. directory
+	Tk().withdraw() 
+#We don't want a full GUI, so keep the root window from appearing
+
+############# Reading the .mhd file #################
+	filename_case = askopenfilename() 
+#show an "Open" dialog box and return the path to the selected file
+	print('Please wait...') #Just to know if it's running
+	cwd = os.path.dirname(os.path.realpath(filename_case)) 
+#get the address of the folder where the file is located
+	
+	index = cwd.index('Case')	#extract image number
+	a = cwd[index+4]	
+	b = cwd[index+5]
+	case_num = a + b	#remember image number
+
+	t_len = len(target) #remembers length of target array
+	with open(filename_case, 'r') as f: #r indicates read-only. 
+									  #open the mhd file as read only to prevent changing anything 
+		content = f.read() 
+#Extract all characters in the file as a string
+		words = content.split() 
+#Break the string at every space and make an array where every #element is a word from the string
+		found = [0, 0, 0] 
+#array to keep track of which target words have been found. 
+#length must be same as target array length
+	
+		for i,w in enumerate(words):  
+#enumerate adds a counter to the iterable
+			for j in range (0,t_len):	
+#j runs through target array to find a match
+				if w == target[j]: 		
+#if word w matches the target word
+					If j == 0:
+#when looking for dimsize
+#the 2nd, 3rd and 4th word after dimsize are the required numbers
+						xnum = words[i+2] 
+						ynum = words[i+3]
+						znum = words[i+4] 
+						found[0] = 1
+#track found							
+					elif j == 1: 			
+#when looking for elemnttype
+						etype = words[i+2]	
+#the 2nd word after match is required
+						found[1] = 1		
+#track found
+					
+					elif j == 2:			
+#when looking for elementdatafile
+						casefile = words [i+2] 
+	
+#the 2nd word after match is required
+						found[2] = 1		
+#track found
+					
+		prtText = ['Error! ', ' does not exist in file.']
+			
+		for i in range (0,t_len):	
+			if found[i] != 1:
+				print prtText[0]+target[i]+prtText[1]
+#print error message if cannot find required data in mhd file
+				sys.exit() 
+#Exit program if all data required cannot be found
+			
+#convert string to integer	
+	xnum = int(xnum)
+	ynum = int(ynum)		
+	znum = int(znum)
+				
+########## Reading in the relevant .raw file ################
+	if etype == 'MET_CHAR':
+		etype = 'int8'	#integer 8-bit
+	elif etype == 'MET_SHORT':
+		etype = 'uint16'	#unsigned integer 16-bit
+	elif etype == 'MET_FLOAT':
+		etype = 'f4' #float 4-bit
+	else:
+		print('Error! Unknown ElementType.')
+		sys.exit()	
+#only expecting 3 types of element types. Error message if not one #of those
+
+	case_raw = cwd + '/' + casefile	
+#moving on to image file instead of mhd file
+	Image = np.fromfile(case_raw, dtype=np.dtype(etype), sep="") #take input as an array
+	Image = Image * 1.0 					
+#convert all values to float
+	Image = Image.reshape([znum,ynum,xnum])	
+#re-size image according to z-dimension 
+
+	return Image, xnum, ynum, znum, case_num
+
